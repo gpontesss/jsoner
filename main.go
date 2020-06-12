@@ -3,13 +3,14 @@ package main
 import "fmt"
 
 func main() {
-	jsonStr := `	[{}, {}		]`
+	jsonStr := `     [{1.23}, {1e-1}		]`
+	fmt.Printf("Lexing '%s'\n\n", jsonStr)
 	lexer := NewLexer(jsonStr)
 	tokens, err := lexer.Lex()
-	if err != nil {
-		panic(err)
-	}
 	for _, token := range tokens {
 		fmt.Println(token)
+	}
+	if err != nil {
+		panic(err)
 	}
 }

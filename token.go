@@ -65,12 +65,13 @@ func (k TokenKind) String() string {
 
 // Token docs here
 type Token struct {
-	kind  TokenKind
-	index int
-	value interface{}
+	kind   TokenKind
+	index  int
+	length int
+	value  interface{}
 }
 
 // String docs here
 func (t Token) String() string {
-	return fmt.Sprintf("%s %d, %s", t.kind, t.index, t.value)
+	return fmt.Sprintf("%s char %d:%d, %v", t.kind, t.index, t.index+t.length, t.value)
 }
