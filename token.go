@@ -42,7 +42,6 @@ const (
 	StringToken
 
 	EOFToken
-	UnknownToken
 )
 
 func (k TokenKind) String() string {
