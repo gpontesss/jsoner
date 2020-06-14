@@ -2,13 +2,28 @@ package main
 
 import "fmt"
 
+// Token docs here
+type Token struct {
+	kind   TokenKind
+	index  int
+	length int
+	value  interface{}
+}
+
+// String docs here
+func (t Token) String() string {
+	return fmt.Sprintf("%s char %d:%d, %v", t.kind, t.index, t.index+t.length, t.value)
+}
+
 // TokenKind docs here
 type TokenKind int
 
 // Reference: https://tools.ietf.org/html/rfc7159#section-2
 const (
+	ErrorToken TokenKind = iota
+
 	// Structural characters
-	BeginArrayToken TokenKind = iota
+	BeginArrayToken
 	EndArrayToken
 
 	BeginObjectToken
@@ -32,6 +47,8 @@ const (
 
 func (k TokenKind) String() string {
 	switch k {
+	case ErrorToken:
+		return "error"
 	case BeginArrayToken:
 		return "["
 	case EndArrayToken:
@@ -41,9 +58,9 @@ func (k TokenKind) String() string {
 	case EndObjectToken:
 		return "}"
 	case ColonToken:
-		return "colon"
+		return ";"
 	case CommaToken:
-		return "comma"
+		return ","
 	case FalseToken:
 		return "false"
 	case TrueToken:
@@ -56,22 +73,7 @@ func (k TokenKind) String() string {
 		return "string"
 	case EOFToken:
 		return "EOF"
-	case UnknownToken:
-		return "Unknown"
 	default:
 		panic("Unexpected token kind")
 	}
-}
-
-// Token docs here
-type Token struct {
-	kind   TokenKind
-	index  int
-	length int
-	value  interface{}
-}
-
-// String docs here
-func (t Token) String() string {
-	return fmt.Sprintf("%s char %d:%d, %v", t.kind, t.index, t.index+t.length, t.value)
 }

@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"unicode"
 )
 
@@ -59,20 +60,18 @@ loop:
 		token.kind = CommaToken
 	case '"':
 		token = l.lexString()
-	case ' ', '\r', '\t', '\n':
-		l.Advance()
-		goto loop
 	case '-':
-		l.Advance()
-		token = l.lexNumber(true)
+		return l.lexNumber()
 	default:
-		if unicode.IsDigit(l.Current()) {
-			token = l.lexNumber(false)
-		} else {
-			// Error: unknown token
-			l.err = fmt.Errorf("Unexpected char '%s'", l.Current())
-			token.kind = UnknownToken
+		if unicode.IsSpace(l.Current()) {
+			l.Advance()
+			goto loop
 		}
+		if unicode.IsDigit(l.Current()) {
+			return l.lexNumber()
+		}
+		// Error: unknown token
+		l.err = fmt.Errorf("Unexpected char %q", l.Current())
 	}
 
 	l.Advance()
@@ -95,52 +94,54 @@ func (l *Lexer) lexString() Token {
 // plus 			= %x2B          ; +
 // zero 			= %x30          ; 0
 //
-func (l *Lexer) lexNumber(minus bool) Token {
-	if l.Current() == '0' && unicode.IsDigit(l.LookAhead()) {
-		// "Leading zeros are *not allowed*"
-		// Error
+func (l *Lexer) lexNumber() Token {
+	l.Accept("-")
+	if l.IsAtEnd() || !unicode.IsDigit(l.Current()) {
+		l.AdvanceTillSpace()
+		l.err = fmt.Errorf("Bad number %s", l.source[l.start:l.current])
 		return Token{}
 	}
 
-	for unicode.IsDigit(l.Current()) {
+	if l.Accept("0") && !l.IsAtEnd() && unicode.IsDigit(l.Current()) {
+		// "Leading zeros are *not allowed*"
+		l.err = fmt.Errorf("Leading zeros are not allowed")
+		return Token{}
+	}
+
+	for !l.IsAtEnd() && unicode.IsDigit(l.Current()) {
 		// Consume all integer digits
 		l.Advance()
 	}
 
-	end := l.current
-	if l.Current() == '.' {
-		l.Advance()
-		if !unicode.IsDigit(l.Current()) {
+	if l.Accept(".") {
+		if l.IsAtEnd() || !unicode.IsDigit(l.Current()) {
 			// "A fraction part is a decimal point followed by *one or more* digits"
 			l.err = fmt.Errorf("Expected integer, got %s", strconv.QuoteRune(l.Current()))
 			return Token{}
 		}
-		for unicode.IsDigit(l.Current()) {
+		for !l.IsAtEnd() && unicode.IsDigit(l.Current()) {
 			// Consume all fractional digit characters
 			l.Advance()
 		}
-		end = l.current
 	}
 
-	if unicode.ToLower(l.Current()) == 'e' {
+	if l.Accept("eE") {
 		// An exponent part begins with the letter E in upper or lower case,
 		// which may be followed by a plus or minus sign. The E and optional
 		// sign are followed by one or more digits
-		if l.Advance(); l.Current() == '+' || l.Current() == '-' {
-			l.Advance()
-		}
-		if !unicode.IsDigit(l.Current()) {
+		l.Accept("+-")
+		if !l.IsAtEnd() && !unicode.IsDigit(l.Current()) {
 			l.err = fmt.Errorf("Expected integer, got %s", strconv.QuoteRune(l.Current()))
 			return Token{}
 		}
 
-		for unicode.IsDigit(l.Advance()) {
+		for !l.IsAtEnd() && unicode.IsDigit(l.Current()) {
 			// Consume all fractional digit characters
+			l.Advance()
 		}
-		end = l.current - 1
 	}
 
-	val, err := strconv.ParseFloat(l.source[l.start:end], 64)
+	val, err := strconv.ParseFloat(l.source[l.start:l.current], 64)
 	if err != nil {
 		// For debugging purposes
 		panic(err)
@@ -149,7 +150,7 @@ func (l *Lexer) lexNumber(minus bool) Token {
 	return Token{
 		kind:   NumberToken,
 		index:  l.start,
-		length: end - l.start,
+		length: l.current - l.start,
 		value:  val,
 	}
 }
@@ -157,6 +158,19 @@ func (l *Lexer) lexNumber(minus bool) Token {
 // Current docs here
 func (l *Lexer) Current() rune {
 	return rune(l.source[l.current])
+}
+
+// Accept docs here
+func (l *Lexer) Accept(s string) bool {
+	if l.IsAtEnd() {
+		return false
+	}
+
+	if strings.ContainsRune(s, l.Advance()) {
+		return true
+	}
+	l.Backup()
+	return false
 }
 
 // LookAhead docs here
@@ -168,6 +182,19 @@ func (l *Lexer) LookAhead() rune {
 func (l *Lexer) Advance() rune {
 	l.current++
 	return rune(l.source[l.current-1])
+}
+
+// AdvanceTillSpace docs here
+func (l *Lexer) AdvanceTillSpace() bool {
+	for !l.IsAtEnd() && unicode.IsSpace(l.Current()) {
+		l.Advance()
+	}
+	return l.IsAtEnd()
+}
+
+// Backup docs here
+func (l *Lexer) Backup() {
+	l.current--
 }
 
 // IsAtEnd docs here
