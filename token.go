@@ -57,7 +57,7 @@ func (k TokenKind) String() string {
 	case EndObjectToken:
 		return "}"
 	case ColonToken:
-		return ";"
+		return ":"
 	case CommaToken:
 		return ","
 	case FalseToken:
