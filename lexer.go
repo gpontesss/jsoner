@@ -59,7 +59,7 @@ loop:
 	case ',':
 		token.kind = CommaToken
 	case '"':
-		token = l.lexString()
+		return l.lexString()
 	case '-':
 		return l.lexNumber()
 	default:
@@ -78,22 +78,89 @@ loop:
 	return token
 }
 
+/*
+	string 	  	= quotation-mark *char quotation-mark
+	unescaped 	= %x20-21 / %x23-5B / %x5D-10FFFF
+
+	char = unescaped /
+		escape (
+			%x22 /          ; "    quotation mark  U+0022
+			%x5C /          ; \    reverse solidus U+005C
+			%x2F /          ; /    solidus         U+002F
+			%x62 /          ; b    backspace       U+0008
+			%x66 /          ; f    form feed       U+000C
+			%x6E /          ; n    line feed       U+000A
+			%x72 /          ; r    carriage return U+000D
+			%x74 /          ; t    tab             U+0009
+			%x75 4HEXDIG )  ; uXXXX                U+XXXX
+	escape 			= %x5C  ; \
+	quotation-mark 	= %x22  ; "
+*/
 func (l *Lexer) lexString() Token {
-	return Token{}
+	if !l.Accept(`"`) {
+		l.err = fmt.Errorf("Bad string")
+		return Token{}
+	}
+
+	var b strings.Builder
+	for !l.IsAtEnd() && !l.Accept(`"`) {
+		// if !l.Accept(`"/\bfnrtu`)
+		if l.Accept(`\`) {
+			switch l.Advance() {
+			case '"', '/', '\\':
+				b.WriteRune(l.LookBehind())
+			case 'b':
+				b.WriteRune('\b')
+			case 'f':
+				b.WriteRune('\f')
+			case 'n':
+				b.WriteRune('\n')
+			case 'r':
+				b.WriteRune('\r')
+			case 't':
+				b.WriteRune('\t')
+			case 'u':
+				for i := 0; i < 4; i++ {
+					if l.IsAtEnd() || !l.Accept("0123456789abcedfABCDEF") {
+						l.err = fmt.Errorf("Bad scaped hex")
+						return Token{}
+					}
+				}
+				hex, err := strconv.ParseInt(l.source[l.current-4:l.current], 16, 64)
+				if err != nil {
+					panic(err)
+				}
+				b.WriteRune(rune(hex))
+			default:
+				l.err = fmt.Errorf("Bad string scaped char %s", l.source[l.current-1:l.current+1])
+				return Token{}
+			}
+			continue
+		}
+		b.WriteRune(l.Advance())
+	}
+
+	return Token{
+		kind:   StringToken,
+		index:  l.start,
+		length: l.current,
+		value:  b.String(),
+	}
 }
 
-// number = [ minus ] int [ frac ] [ exp ]
-//
-// int 				= zero / ( digit1-9 *DIGIT )
-// frac 			= decimal-point 1*DIGIT
-// exp 				= e [ minus / plus ] 1*DIGIT
-// decimal-point 	= %x2E       	; .
-// digit1-9 		= %x31-39       ; 1-9
-// e 				= %x65 / %x45   ; e E
-// minus 			= %x2D          ; -
-// plus 			= %x2B          ; +
-// zero 			= %x30          ; 0
-//
+/*
+	number = [ minus ] int [ frac ] [ exp ]
+
+	int 			= zero / ( digit1-9 *DIGIT )
+	frac 			= decimal-point 1*DIGIT
+	exp 			= e [ minus / plus ] 1*DIGIT
+	decimal-point 	= %x2E       	; .
+	digit1-9 		= %x31-39       ; 1-9
+	e 				= %x65 / %x45   ; e E
+	minus 			= %x2D          ; -
+	plus 			= %x2B          ; +
+	zero 			= %x30          ; 0
+*/
 func (l *Lexer) lexNumber() Token {
 	l.Accept("-")
 	if l.IsAtEnd() || !unicode.IsDigit(l.Current()) {
@@ -176,6 +243,11 @@ func (l *Lexer) Accept(s string) bool {
 // LookAhead docs here
 func (l *Lexer) LookAhead() rune {
 	return rune(l.source[l.current+1])
+}
+
+// LookBehind docs here
+func (l *Lexer) LookBehind() rune {
+	return rune(l.source[l.current-1])
 }
 
 // Advance docs here
