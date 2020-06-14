@@ -62,6 +62,35 @@ loop:
 		return l.lexString()
 	case '-':
 		return l.lexNumber()
+	case 'n':
+		if l.AcceptAll("null") {
+			return Token{
+				kind:   NullToken,
+				index:  l.start,
+				length: l.current - l.start,
+			}
+		}
+		l.err = fmt.Errorf("Bad null token at char %d", l.current)
+	case 't':
+		if l.AcceptAll("true") {
+			return Token{
+				kind:   TrueToken,
+				index:  l.start,
+				length: l.current - l.start,
+				value:  true,
+			}
+		}
+		l.err = fmt.Errorf("Bad true token at char %d", l.current)
+	case 'f':
+		if l.AcceptAll("false") {
+			return Token{
+				kind:   FalseToken,
+				index:  l.start,
+				length: l.current - l.start,
+				value:  false,
+			}
+		}
+		l.err = fmt.Errorf("Bad false token at char %d", l.current)
 	default:
 		if unicode.IsSpace(l.Current()) {
 			l.Advance()
@@ -238,6 +267,17 @@ func (l *Lexer) Accept(s string) bool {
 	}
 	l.Backup()
 	return false
+}
+
+// AcceptAll docs here
+func (l *Lexer) AcceptAll(s string) bool {
+	for i := 0; i < len(s); i++ {
+		if l.IsAtEnd() || !l.Accept(s[i:i+1]) {
+			l.current -= i
+			return false
+		}
+	}
+	return true
 }
 
 // LookAhead docs here
