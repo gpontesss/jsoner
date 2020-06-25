@@ -2,7 +2,7 @@ package main
 
 import "fmt"
 
-// Token docs here
+// Token has the information about its kind, its value and its position at input
 type Token struct {
 	kind   TokenKind
 	index  int
@@ -10,12 +10,11 @@ type Token struct {
 	value  interface{}
 }
 
-// String docs here
 func (t Token) String() string {
 	return fmt.Sprintf("%s char %d:%d, %v", t.kind, t.index, t.index+t.length, t.value)
 }
 
-// TokenKind docs here
+// TokenKind is the token kind
 type TokenKind int
 
 // Reference: https://tools.ietf.org/html/rfc7159#section-2
