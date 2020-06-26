@@ -7,7 +7,7 @@ import (
 	"unicode"
 )
 
-// Lexer docs here
+// Lexer produces tokens from an input source
 type Lexer struct {
 	start   int
 	current int
@@ -15,12 +15,12 @@ type Lexer struct {
 	err     error
 }
 
-// NewLexer docs here
+// NewLexer creates a Lexer
 func NewLexer(source string) Lexer {
 	return Lexer{source: source}
 }
 
-// Lex docs here
+// Lex tokenizes entire input source
 func (l *Lexer) Lex() ([]Token, error) {
 	tokens := make([]Token, 0)
 	for !l.IsAtEnd() {
@@ -33,7 +33,7 @@ func (l *Lexer) Lex() ([]Token, error) {
 	return tokens, l.err
 }
 
-// NextToken docs here
+// NextToken lexes a token at current position
 func (l *Lexer) NextToken() Token {
 	if l.IsAtEnd() {
 		return Token{
@@ -99,7 +99,6 @@ loop:
 		if unicode.IsDigit(l.Current()) {
 			return l.lexNumber()
 		}
-		// Error: unknown token
 		l.err = fmt.Errorf("Unexpected char %q", l.Current())
 	}
 
@@ -251,12 +250,13 @@ func (l *Lexer) lexNumber() Token {
 	}
 }
 
-// Current docs here
+// Current returns rune at current position
 func (l *Lexer) Current() rune {
 	return rune(l.source[l.current])
 }
 
-// Accept docs here
+// Accept consumes the current rune it is contained in a string and returns true;
+// otherwise current position remains the same and returns false.
 func (l *Lexer) Accept(s string) bool {
 	if l.IsAtEnd() {
 		return false
@@ -269,7 +269,9 @@ func (l *Lexer) Accept(s string) bool {
 	return false
 }
 
-// AcceptAll docs here
+// AcceptAll consumes runes if they match the exact sequence of a string and returns
+// true; if the string is not entirely matched, current position remains the same
+// and returns false.
 func (l *Lexer) AcceptAll(s string) bool {
 	for i := 0; i < len(s); i++ {
 		if l.IsAtEnd() || !l.Accept(s[i:i+1]) {
@@ -280,23 +282,25 @@ func (l *Lexer) AcceptAll(s string) bool {
 	return true
 }
 
-// LookAhead docs here
+// LookAhead returns the next rune without advancing.
 func (l *Lexer) LookAhead() rune {
 	return rune(l.source[l.current+1])
 }
 
-// LookBehind docs here
+// LookBehind returns the last rune read.
 func (l *Lexer) LookBehind() rune {
 	return rune(l.source[l.current-1])
 }
 
-// Advance docs here
+// Advance advances the current position and returns rune at old position.
 func (l *Lexer) Advance() rune {
 	l.current++
 	return rune(l.source[l.current-1])
 }
 
-// AdvanceTillSpace docs here
+// AdvanceTillSpace consumes runes until it reaches the position of a space, then
+// it stops and returns true. If it gets to the end of the input before that
+// returns false.
 func (l *Lexer) AdvanceTillSpace() bool {
 	for !l.IsAtEnd() && unicode.IsSpace(l.Current()) {
 		l.Advance()
