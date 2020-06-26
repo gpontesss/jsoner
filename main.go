@@ -2,6 +2,9 @@ package main
 
 import "fmt"
 
+// This should be temporary. Next step after doing some cleanup on the structs
+// interfaces is to create tests for them, thus eliminating the need for this
+// code.
 func main() {
 	jsonStr := `[{"key1": "val1"}, "val2", [1,2,3], {"arr": []}]`
 
