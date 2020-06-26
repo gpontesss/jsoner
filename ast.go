@@ -1,16 +1,16 @@
 package main
 
-// AstValue docs here
+// AstValue is a JSON value
 type AstValue interface{}
 
-// AstObject docs here
+// AstObject is a JSON object
 type AstObject []AstMember
 
-// AstMember docs here
+// AstMember is JSON member
 type AstMember struct {
 	key string
 	val AstValue
 }
 
-// AstArray docs here
+// AstArray is a JSON array
 type AstArray []AstValue
